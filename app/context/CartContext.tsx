@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { MenuItem, Restaurant, CartItem, Deal, applyCoupon } from "../lib/api";
+import { MenuItem, Restaurant, CartItem, Deal, applyCoupon, API_BASE } from "../lib/api";
 
 interface UserProfile {
   id: string;

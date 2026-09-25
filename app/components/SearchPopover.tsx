@@ -11,6 +11,7 @@ interface SearchPopoverProps {
   restaurants: Restaurant[];
   items: MenuItem[];
   onClose: () => void;
+  className?: string;
 }
 
 export default function SearchPopover({
@@ -18,6 +19,7 @@ export default function SearchPopover({
   restaurants,
   items,
   onClose,
+  className = "",
 }: SearchPopoverProps) {
   const { addToCart, setActiveItemModal } = useCart();
 
@@ -41,7 +43,7 @@ export default function SearchPopover({
   const hasResults = matchingRestaurants.length > 0 || matchingItems.length > 0;
 
   return (
-    <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200 rounded-3xl shadow-2xl p-5 z-50 text-slate-800 animate-fade-in max-h-[80vh] overflow-y-auto">
+    <div className={`absolute top-full mt-2 bg-white border border-slate-200 rounded-3xl shadow-2xl p-4 sm:p-5 z-50 text-slate-800 animate-fade-in max-h-[80vh] overflow-y-auto ${className || "left-0 right-0"}`}>
       {!hasResults ? (
         <div className="text-center py-6">
           <p className="text-sm font-semibold text-slate-700">No results found for "{searchTerm}"</p>
