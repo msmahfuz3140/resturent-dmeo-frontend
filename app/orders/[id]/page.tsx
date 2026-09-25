@@ -9,7 +9,7 @@ import ItemModal from "../../components/ItemModal";
 import AuthModal from "../../components/AuthModal";
 import TableReservationModal from "../../components/TableReservationModal";
 import Footer from "../../components/Footer";
-import { fetchOrder, Order, API_BASE } from "../../lib/api";
+import { fetchOrder, Order } from "../../lib/api";
 import {
   ShieldCheckIcon,
   BikeIcon,
@@ -47,28 +47,15 @@ export default function OrderTrackingPage() {
 
   useEffect(() => {
     loadOrderData();
-    const interval = setInterval(loadOrderData, 8000);
-    return () => clearInterval(interval);
   }, [idOrNumber]);
 
-  const handleAdvanceStatus = async () => {
+  // Demo mode: advance status locally without backend
+  const handleAdvanceStatus = () => {
     if (!order) return;
     const currentIndex = ORDER_STEPS.findIndex((s) => s.key === order.orderStatus);
     if (currentIndex < ORDER_STEPS.length - 1) {
-      const nextStatus = ORDER_STEPS[currentIndex + 1].key;
-      setUpdating(true);
-      try {
-        await fetch(`${API_BASE}/orders/${order._id}/status`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: nextStatus }),
-        });
-        await loadOrderData();
-      } catch (e) {
-        console.error("Error updating status:", e);
-      } finally {
-        setUpdating(false);
-      }
+      const nextStatus = ORDER_STEPS[currentIndex + 1].key as Order["orderStatus"];
+      setOrder((prev) => prev ? { ...prev, orderStatus: nextStatus } : prev);
     }
   };
 

@@ -8,7 +8,8 @@ import ItemModal from "../components/ItemModal";
 import AuthModal from "../components/AuthModal";
 import TableReservationModal from "../components/TableReservationModal";
 import Footer from "../components/Footer";
-import { Order, API_BASE } from "../lib/api";
+import { Order, fetchAllOrders } from "../lib/api";
+import { mockReservations } from "../lib/mockData";
 import { useCart } from "../context/CartContext";
 import { ShoppingBagIcon, ClockIcon, BikeIcon, ChevronRightIcon } from "../components/Icons";
 
@@ -22,12 +23,9 @@ export default function OrdersHistoryPage() {
   useEffect(() => {
     async function loadData() {
       try {
-        const [ordRes, resRes] = await Promise.all([
-          fetch(`${API_BASE}/orders?limit=25`).then((r) => r.json()).catch(() => ({ data: [] })),
-          fetch(`${API_BASE}/reservations`).then((r) => r.json()).catch(() => ({ data: [] })),
-        ]);
-        setOrders(ordRes.data || []);
-        setReservations(resRes.data || []);
+        const ordersData = await fetchAllOrders();
+        setOrders(ordersData);
+        setReservations(mockReservations);
       } catch (e) {
         console.error("Orders load error:", e);
       } finally {

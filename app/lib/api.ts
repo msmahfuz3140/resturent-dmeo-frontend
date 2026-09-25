@@ -1,4 +1,23 @@
+// ─────────────────────────────────────────────────────────────
+// Feastora API — Demo Mode (All data served from mockData.ts)
+// No backend required. Safe to deploy on Vercel without backend.
+// ─────────────────────────────────────────────────────────────
+
+import {
+  mockCategories,
+  mockDeals,
+  mockRestaurants,
+  mockMenuItems,
+  mockReviews,
+  mockOrders,
+  getMockRestaurantDetails,
+  validateMockCoupon,
+} from "./mockData";
+
+// Keep API_BASE exported so existing imports don't break
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5050/api";
+
+// ─── Interfaces ───────────────────────────────────────────────
 
 export interface MenuItemOption {
   name: string;
@@ -134,7 +153,8 @@ export interface Order {
   createdAt: string;
 }
 
-// Fetch all restaurants
+// ─── Data Fetch Functions (Demo Mode — no HTTP calls) ─────────
+
 export async function fetchRestaurants(params?: {
   search?: string;
   cuisine?: string;
@@ -142,99 +162,135 @@ export async function fetchRestaurants(params?: {
   featured?: boolean;
   sort?: string;
 }): Promise<Restaurant[]> {
-  const query = new URLSearchParams();
-  if (params?.search) query.append("search", params.search);
-  if (params?.cuisine && params.cuisine !== "all") query.append("cuisine", params.cuisine);
-  if (params?.area && params.area !== "all") query.append("area", params.area);
-  if (params?.featured) query.append("featured", "true");
-  if (params?.sort) query.append("sort", params.sort);
-
-  const res = await fetch(`${API_BASE}/restaurants?${query.toString()}`, { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to load restaurants");
-  const json = await res.json();
-  return json.data || [];
+  // Simulate async
+  await Promise.resolve();
+  let list = [...mockRestaurants];
+  if (params?.featured) list = list.filter((r) => r.isFeatured);
+  if (params?.cuisine && params.cuisine !== "all") {
+    list = list.filter((r) =>
+      r.cuisines.some((c) => c.toLowerCase().includes(params.cuisine!.toLowerCase()))
+    );
+  }
+  if (params?.search) {
+    const term = params.search.toLowerCase();
+    list = list.filter(
+      (r) =>
+        r.name.toLowerCase().includes(term) ||
+        r.cuisines.some((c) => c.toLowerCase().includes(term)) ||
+        r.tagline?.toLowerCase().includes(term)
+    );
+  }
+  return list;
 }
 
-// Fetch single restaurant with menu and reviews
 export async function fetchRestaurantDetails(idOrSlug: string): Promise<{
   restaurant: Restaurant;
   groupedMenu: { category: string; items: MenuItem[] }[];
   allItems: MenuItem[];
   reviews: Review[];
 }> {
-  const res = await fetch(`${API_BASE}/restaurants/${idOrSlug}`, { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to load restaurant details");
-  const json = await res.json();
-  return json.data;
+  await Promise.resolve();
+  const data = getMockRestaurantDetails(idOrSlug);
+  if (!data) throw new Error("Restaurant not found");
+  return data;
 }
 
-// Fetch categories
 export async function fetchCategories(): Promise<Category[]> {
-  const res = await fetch(`${API_BASE}/categories`, { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to load categories");
-  const json = await res.json();
-  return json.data || [];
+  await Promise.resolve();
+  return [...mockCategories];
 }
 
-// Fetch deals
 export async function fetchDeals(): Promise<Deal[]> {
-  const res = await fetch(`${API_BASE}/deals`, { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to load deals");
-  const json = await res.json();
-  return json.data || [];
+  await Promise.resolve();
+  return [...mockDeals];
 }
 
-// Apply coupon code
+export async function fetchPopularDishes(): Promise<{ item: MenuItem; restaurant: Restaurant }[]> {
+  await Promise.resolve();
+  const popular = mockMenuItems.filter((m) => m.isPopular);
+  return popular.slice(0, 8).map((item) => {
+    const restaurant = mockRestaurants.find((r) => r._id === item.restaurantId) || mockRestaurants[0];
+    return { item, restaurant };
+  });
+}
+
+export async function fetchAllOrders(): Promise<Order[]> {
+  await Promise.resolve();
+  return [...mockOrders];
+}
+
+export async function fetchAllItems(): Promise<MenuItem[]> {
+  await Promise.resolve();
+  return [...mockMenuItems];
+}
+
+export async function fetchAllReviews(): Promise<Review[]> {
+  await Promise.resolve();
+  return [...mockReviews];
+}
+
+// ─── Apply Coupon (local validation, no backend) ──────────────
 export async function applyCoupon(code: string, subtotal: number) {
-  const res = await fetch(`${API_BASE}/deals/apply`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ code, subtotal }),
-  });
-  return res.json();
+  await Promise.resolve();
+  return validateMockCoupon(code, subtotal);
 }
 
-// Place Order
+// ─── Place Order (demo — just resolves with a mock confirmation) ─
 export async function submitOrder(orderData: Partial<Order>) {
-  const res = await fetch(`${API_BASE}/orders`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(orderData),
-  });
-  return res.json();
+  await Promise.resolve();
+  return {
+    success: true,
+    message: "Order placed successfully! (Demo Mode)",
+    data: {
+      ...orderData,
+      _id: `demo_${Date.now()}`,
+      orderNumber: `FST-${Math.floor(Math.random() * 900) + 100}`,
+      orderStatus: "placed",
+      paymentStatus: "pending",
+      estimatedDeliveryTime: "30-45 min",
+      createdAt: new Date().toISOString(),
+    },
+  };
 }
 
-// Fetch Order tracking details
+// ─── Fetch Order tracking (demo — look up from mockOrders) ───
 export async function fetchOrder(idOrNumber: string): Promise<Order> {
-  const res = await fetch(`${API_BASE}/orders/${idOrNumber}`, { cache: "no-store" });
-  if (!res.ok) throw new Error("Failed to load order");
-  const json = await res.json();
-  return json.data;
+  await Promise.resolve();
+  const found = mockOrders.find(
+    (o) => o._id === idOrNumber || o.orderNumber === idOrNumber
+  );
+  if (found) return found;
+  // Return a generic demo order if not found
+  return mockOrders[0];
 }
 
-// Upload Image / PDF (Cloudinary via backend endpoint)
-export async function uploadToCloudinaryEndpoint(file: File, folder = "feastora"): Promise<{
+// ─── Upload (demo — not available without backend) ────────────
+export async function uploadToCloudinaryEndpoint(
+  _file: File,
+  _folder = "feastora"
+): Promise<{
   success: boolean;
   data: { url: string; publicId: string; format: string; bytes: number };
   message: string;
 }> {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("folder", folder);
-
-  const res = await fetch(`${API_BASE}/upload`, {
-    method: "POST",
-    body: formData,
-  });
-  return res.json();
+  return {
+    success: false,
+    data: { url: "", publicId: "", format: "", bytes: 0 },
+    message: "Upload unavailable in demo mode.",
+  };
 }
 
-// Demo Login
+// ─── Demo Login ───────────────────────────────────────────────
 export async function apiDemoLogin(role: "user" | "partner" = "user") {
-  const res = await fetch(`${API_BASE}/auth-demo-login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ role }),
-  });
-  return res.json();
+  await Promise.resolve();
+  if (role === "partner") {
+    return {
+      success: true,
+      user: { id: "partner_demo", name: "Kitchen Partner Demo", email: "partner@feastora.demo", role: "partner" },
+    };
+  }
+  return {
+    success: true,
+    user: { id: "user_demo", name: "Mahfuz Demo", email: "mahfuz@feastora.demo", role: "user" },
+  };
 }

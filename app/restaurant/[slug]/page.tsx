@@ -10,7 +10,7 @@ import AuthModal from "../../components/AuthModal";
 import TableReservationModal from "../../components/TableReservationModal";
 import Footer from "../../components/Footer";
 import DishCard from "../../components/DishCard";
-import { fetchRestaurantDetails, Restaurant, MenuItem, Review, API_BASE } from "../../lib/api";
+import { fetchRestaurantDetails, Restaurant, MenuItem, Review } from "../../lib/api";
 import { useCart } from "../../context/CartContext";
 import {
   StarIcon,
@@ -64,40 +64,21 @@ export default function RestaurantDetailPage() {
     e.preventDefault();
     if (!reviewComment.trim() || !restaurant) return;
     setSubmittingReview(true);
-    try {
-      const res = await fetch(`${API_BASE}/reviews`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          restaurantId: restaurant._id,
-          userName: reviewName || user?.name || "Verified Patron",
-          rating: reviewRating,
-          comment: reviewComment,
-          tag: "Verified Diner",
-        }),
-      });
-      const data = await res.json();
-      if (data.success && data.data) {
-        setReviews((prev) => [data.data, ...prev]);
-      } else {
-        const fallbackReview: Review = {
-          _id: `rev_${Date.now()}`,
-          restaurantId: restaurant._id,
-          userName: reviewName || "Verified Patron",
-          rating: reviewRating,
-          comment: reviewComment,
-          tag: "Verified Diner",
-        };
-        setReviews((prev) => [fallbackReview, ...prev]);
-      }
-      setReviewComment("");
-      setReviewSuccess(true);
-      setTimeout(() => setReviewSuccess(false), 4000);
-    } catch (e) {
-      console.error("Review error:", e);
-    } finally {
-      setSubmittingReview(false);
-    }
+    // Demo mode: add review to local state directly
+    const newReview: Review = {
+      _id: `rev_${Date.now()}`,
+      restaurantId: restaurant._id,
+      userName: reviewName || user?.name || "Verified Patron",
+      rating: reviewRating,
+      comment: reviewComment,
+      tag: "Verified Diner",
+      createdAt: new Date().toISOString(),
+    };
+    setReviews((prev) => [newReview, ...prev]);
+    setReviewComment("");
+    setReviewSuccess(true);
+    setSubmittingReview(false);
+    setTimeout(() => setReviewSuccess(false), 4000);
   };
 
 

@@ -21,7 +21,7 @@ import {
   fetchRestaurants,
   fetchCategories,
   fetchDeals,
-  API_BASE,
+  fetchPopularDishes,
 } from "./lib/api";
 import { FlameIcon, SparklesIcon, ShieldCheckIcon, BikeIcon, StarIcon } from "./components/Icons";
 
@@ -64,17 +64,10 @@ export default function HomePage() {
         setCategories(catList);
         setDeals(dealList);
 
-        // Fetch popular items from MongoDB
+        // Load popular dishes from mock data
         try {
-          const res = await fetch(`${API_BASE}/items?popular=true`);
-          const json = await res.json();
-          if (json.data && Array.isArray(json.data)) {
-            const combined = json.data.map((dish: any) => {
-              const matchedRest = restList.find((r) => r._id === dish.restaurantId?._id || r._id === dish.restaurantId) || restList[0];
-              return { item: dish, restaurant: matchedRest };
-            });
-            setPopularDishes(combined.slice(0, 8));
-          }
+          const combined = await fetchPopularDishes();
+          setPopularDishes(combined);
         } catch (e) {
           console.error("Error loading dishes:", e);
         }

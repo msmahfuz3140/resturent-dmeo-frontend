@@ -12,7 +12,6 @@ import {
   fetchRestaurants,
   uploadToCloudinaryEndpoint,
   Restaurant,
-  API_BASE,
 } from "../lib/api";
 import {
   UploadCloudIcon,
@@ -81,49 +80,16 @@ export default function PartnerPortalPage() {
     }
 
     setDishUploading(true);
-    try {
-      let imageUrl = "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80";
-
-      if (dishFile) {
-        const uploadRes = await uploadToCloudinaryEndpoint(dishFile, "feastora/dishes");
-        if (uploadRes.success && uploadRes.data?.url) {
-          imageUrl = uploadRes.data.url;
-        }
-      }
-
-      const res = await fetch(`${API_BASE}/items`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          restaurantId: selectedRestId,
-          name: dishName,
-          description: dishDescription,
-          price: Number(dishPrice),
-          discountPrice: dishDiscountPrice ? Number(dishDiscountPrice) : null,
-          category: dishCategory,
-          image: imageUrl,
-          preparationTime: dishPrepTime,
-          isPopular: true,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setDishSuccess(`"${dishName}" uploaded to Cloudinary & saved to MongoDB database!`);
-        setDishName("");
-        setDishDescription("");
-        setDishPrice("");
-        setDishDiscountPrice("");
-        setDishFile(null);
-        setDishPreview("");
-      } else {
-        setDishError(data.message || "Failed to create dish.");
-      }
-    } catch (err: any) {
-      setDishError(err.message || "Error saving dish.");
-    } finally {
-      setDishUploading(false);
-    }
+    // Demo mode: simulate success without backend
+    await new Promise((r) => setTimeout(r, 800));
+    setDishSuccess(`"${dishName}" added to menu (Demo Mode — data not persisted to database).`);
+    setDishName("");
+    setDishDescription("");
+    setDishPrice("");
+    setDishDiscountPrice("");
+    setDishFile(null);
+    setDishPreview("");
+    setDishUploading(false);
   };
 
   const handleSubmitRestaurant = async (e: React.FormEvent) => {
@@ -137,62 +103,17 @@ export default function PartnerPortalPage() {
     }
 
     setRestUploading(true);
-    try {
-      let bannerUrl = "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200&auto=format&fit=crop&q=80";
-      let logoUrl = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=300&auto=format&fit=crop&q=80";
-      let pdfUrl = "";
-
-      if (restBannerFile) {
-        const bRes = await uploadToCloudinaryEndpoint(restBannerFile, "feastora/restaurants");
-        if (bRes.success && bRes.data?.url) bannerUrl = bRes.data.url;
-      }
-
-      if (restLogoFile) {
-        const lRes = await uploadToCloudinaryEndpoint(restLogoFile, "feastora/logos");
-        if (lRes.success && lRes.data?.url) logoUrl = lRes.data.url;
-      }
-
-      if (restPdfFile) {
-        const pRes = await uploadToCloudinaryEndpoint(restPdfFile, "feastora/menus");
-        if (pRes.success && pRes.data?.url) pdfUrl = pRes.data.url;
-      }
-
-      const res = await fetch(`${API_BASE}/restaurants`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: restName,
-          tagline: restTagline,
-          cuisines: restCuisines.split(",").map((c) => c.trim()),
-          area: restArea,
-          address: restAddress,
-          deliveryTime: restDeliveryTime,
-          deliveryFee: Number(restDeliveryFee),
-          banner: bannerUrl,
-          logo: logoUrl,
-          pdfMenuUrl: pdfUrl,
-        }),
-      });
-
-      const data = await res.json();
-      if (data.success) {
-        setRestSuccess(`"${restName}" created in MongoDB with Cloudinary media!`);
-        fetchRestaurants().then(setRestaurants);
-        setRestName("");
-        setRestTagline("");
-        setRestCuisines("");
-        setRestAddress("");
-        setRestBannerFile(null);
-        setRestLogoFile(null);
-        setRestPdfFile(null);
-      } else {
-        setRestError(data.message || "Failed to create restaurant.");
-      }
-    } catch (err: any) {
-      setRestError(err.message || "Error saving restaurant.");
-    } finally {
-      setRestUploading(false);
-    }
+    // Demo mode: simulate success without backend
+    await new Promise((r) => setTimeout(r, 1000));
+    setRestSuccess(`"${restName}" submitted (Demo Mode — data not persisted to database).`);
+    setRestName("");
+    setRestTagline("");
+    setRestCuisines("");
+    setRestAddress("");
+    setRestBannerFile(null);
+    setRestLogoFile(null);
+    setRestPdfFile(null);
+    setRestUploading(false);
   };
 
   return (

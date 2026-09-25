@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { MenuItem, Restaurant, CartItem, Deal, applyCoupon, API_BASE } from "../lib/api";
+import { MenuItem, Restaurant, CartItem, applyCoupon } from "../lib/api";
 
 interface UserProfile {
   id: string;
@@ -61,24 +61,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [couponError, setCouponError] = useState("");
   const [activeItemModal, setActiveItemModal] = useState<{ item: MenuItem; restaurant: Restaurant } | null>(null);
 
+  // Demo mode: reservations stored in local state only (no backend)
   const bookTable = async (resData: any) => {
-    try {
-      const res = await fetch(`${API_BASE}/reservations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(resData),
-      });
-      const data = await res.json();
-      if (data.success && data.data) {
-        setReservations((prev) => [data.data, ...prev]);
-        return data.data;
-      }
-    } catch (e) {
-      console.error("Reservation save error:", e);
-    }
-    const fallback = { id: `res_${Date.now()}`, ...resData, status: "confirmed" };
-    setReservations((prev) => [fallback, ...prev]);
-    return fallback;
+    const confirmationCode = `FST-RES-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newReservation = {
+      id: `res_${Date.now()}`,
+      confirmationCode,
+      ...resData,
+      status: "confirmed",
+    };
+    setReservations((prev) => [newReservation, ...prev]);
+    return newReservation;
   };
 
 

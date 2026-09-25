@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useCart } from "../context/CartContext";
-import { fetchRestaurants, Restaurant, MenuItem, API_BASE } from "../lib/api";
+import { fetchRestaurants, Restaurant, MenuItem, fetchAllItems } from "../lib/api";
 import SearchPopover from "./SearchPopover";
 import {
   ClocheIcon,
@@ -78,10 +78,7 @@ export default function Navbar() {
   // Fetch search data
   useEffect(() => {
     fetchRestaurants().then(setRestaurants).catch(() => {});
-    fetch(`${API_BASE}/items`)
-      .then((r) => r.json())
-      .then((j) => setAllItems(j.data || []))
-      .catch(() => {});
+    fetchAllItems().then(setAllItems).catch(() => {});
   }, []);
 
   // Lock body scroll when mobile menu or search modal is open

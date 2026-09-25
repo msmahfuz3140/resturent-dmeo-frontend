@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { useCart } from "../context/CartContext";
-import { apiDemoLogin, API_BASE } from "../lib/api";
+import { apiDemoLogin } from "../lib/api";
 import { XIcon, FlameIcon, ShieldCheckIcon } from "./Icons";
 
 export default function AuthModal() {
@@ -20,45 +20,19 @@ export default function AuthModal() {
     e.preventDefault();
     setLoading(true);
     setError("");
-
+    // Demo mode: create user locally without backend
     try {
-      const endpoint = tab === "signin" ? "/auth/sign-in/email" : "/auth/sign-up/email";
-      const body = tab === "signin" ? { email, password } : { name, email, password };
-
-      const res = await fetch(`${API_BASE}${endpoint}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      const data = await res.json();
-      if (res.ok) {
-        setUser({
-          id: data.user?.id || `user_${Date.now()}`,
-          name: data.user?.name || name || email.split("@")[0],
-          email: data.user?.email || email,
-          role: "diner",
-          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-        });
-        setIsAuthOpen(false);
-      } else {
-        setUser({
-          id: `user_${Date.now()}`,
-          name: name || email.split("@")[0],
-          email: email,
-          role: "diner",
-          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
-        });
-        setIsAuthOpen(false);
-      }
-    } catch (err: any) {
+      await new Promise((r) => setTimeout(r, 400)); // simulate network
       setUser({
         id: `user_${Date.now()}`,
         name: name || email.split("@")[0],
         email: email,
         role: "diner",
+        avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80",
       });
       setIsAuthOpen(false);
+    } catch (err: any) {
+      setError("Sign in failed. Please try again.");
     } finally {
       setLoading(false);
     }

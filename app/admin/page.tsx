@@ -5,7 +5,6 @@ import Link from "next/link";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import {
-  API_BASE,
   Restaurant,
   Order,
   Deal,
@@ -13,7 +12,11 @@ import {
   Review,
   fetchRestaurants,
   fetchDeals,
+  fetchAllOrders,
+  fetchAllItems,
+  fetchAllReviews,
 } from "../lib/api";
+import { mockReservations, mockStats } from "../lib/mockData";
 import {
   ShieldCheckIcon,
   ClockIcon,
@@ -77,25 +80,23 @@ export default function AdminDashboardPage() {
   const loadAllAdminData = async () => {
     setLoading(true);
     try {
-      const [statsRes, ordersRes, restRes, dealsRes, resRes, itemsRes, reviewsRes] = await Promise.all([
-        fetch(`${API_BASE}/stats`).then((r) => r.json()).catch(() => ({ stats: {} })),
-        fetch(`${API_BASE}/orders?limit=100`).then((r) => r.json()).catch(() => ({ data: [] })),
-        fetchRestaurants().catch(() => []),
-        fetchDeals().catch(() => []),
-        fetch(`${API_BASE}/reservations`).then((r) => r.json()).catch(() => ({ data: [] })),
-        fetch(`${API_BASE}/items`).then((r) => r.json()).catch(() => ({ data: [] })),
-        fetch(`${API_BASE}/reviews`).then((r) => r.json()).catch(() => ({ data: [] })),
+      const [restRes, dealsRes, ordersRes, itemsRes, reviewsRes] = await Promise.all([
+        fetchRestaurants(),
+        fetchDeals(),
+        fetchAllOrders(),
+        fetchAllItems(),
+        fetchAllReviews(),
       ]);
 
-      if (statsRes.stats) setStats(statsRes.stats);
-      setOrders(ordersRes.data || []);
-      setRestaurants(restRes || []);
-      setDeals(dealsRes || []);
-      setReservations(resRes.data || []);
-      setItems(itemsRes.data || []);
-      setReviews(reviewsRes.data || []);
+      setStats(mockStats);
+      setOrders(ordersRes);
+      setRestaurants(restRes);
+      setDeals(dealsRes);
+      setReservations(mockReservations);
+      setItems(itemsRes);
+      setReviews(reviewsRes);
 
-      if (restRes && restRes.length > 0 && !dishRestId) {
+      if (restRes.length > 0 && !dishRestId) {
         setDishRestId(restRes[0]._id);
       }
     } catch (e) {
@@ -107,248 +108,147 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     loadAllAdminData();
-    const timer = setInterval(loadAllAdminData, 15000);
-    return () => clearInterval(timer);
   }, []);
 
+  // ─── Demo Mode: All actions update local state only ───────────────
+
   // 1. Advance Order Status
-  const handleUpdateOrderStatus = async (orderId: string, nextStatus: string) => {
-    try {
-      const res = await fetch(`${API_BASE}/orders/${orderId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: nextStatus }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setActionMessage(`Order #${orderId.slice(-6)} status updated to "${nextStatus}"`);
-        loadAllAdminData();
-        setTimeout(() => setActionMessage(""), 3500);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  const handleUpdateOrderStatus = (_orderId: string, nextStatus: string) => {
+    setOrders((prev) =>
+      prev.map((o) => (o._id === _orderId ? { ...o, orderStatus: nextStatus as Order["orderStatus"] } : o))
+    );
+    setActionMessage(`Order status updated to "${nextStatus}"`);
+    setTimeout(() => setActionMessage(""), 3000);
   };
 
   // 2. Cancel Order
-  const handleCancelOrder = async (orderId: string) => {
-    if (!window.confirm("Are you sure you want to cancel this order?")) return;
-    try {
-      const res = await fetch(`${API_BASE}/orders/${orderId}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "cancelled" }),
-      });
-      if (res.ok) {
-        setActionMessage("Order marked as cancelled");
-        loadAllAdminData();
-        setTimeout(() => setActionMessage(""), 3500);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  const handleCancelOrder = (orderId: string) => {
+    if (!window.confirm("Cancel this order?")) return;
+    setOrders((prev) =>
+      prev.map((o) => (o._id === orderId ? { ...o, orderStatus: "cancelled" as const } : o))
+    );
+    setActionMessage("Order marked as cancelled");
+    setTimeout(() => setActionMessage(""), 3000);
   };
 
   // 3. Toggle Kitchen Open / Closed
-  const handleToggleRestaurantStatus = async (restId: string, currentStatus: boolean) => {
-    try {
-      const res = await fetch(`${API_BASE}/restaurants/${restId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isOpen: !currentStatus }),
-      });
-      if (res.ok) {
-        setActionMessage("Kitchen acceptance status toggled successfully");
-        loadAllAdminData();
-        setTimeout(() => setActionMessage(""), 3000);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  const handleToggleRestaurantStatus = (restId: string, currentStatus: boolean) => {
+    setRestaurants((prev) =>
+      prev.map((r) => (r._id === restId ? { ...r, isOpen: !currentStatus } : r))
+    );
+    setActionMessage("Kitchen status toggled");
+    setTimeout(() => setActionMessage(""), 2500);
   };
 
   // 4. Delete Restaurant
-  const handleDeleteRestaurant = async (restId: string, name: string) => {
-    if (!window.confirm(`Delete restaurant "${name}" and all of its associated menu items?`)) return;
-    try {
-      const res = await fetch(`${API_BASE}/restaurants/${restId}`, { method: "DELETE" });
-      if (res.ok) {
-        setActionMessage(`Restaurant "${name}" removed from platform`);
-        loadAllAdminData();
-        setTimeout(() => setActionMessage(""), 3500);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  const handleDeleteRestaurant = (restId: string, name: string) => {
+    if (!window.confirm(`Delete restaurant "${name}"?`)) return;
+    setRestaurants((prev) => prev.filter((r) => r._id !== restId));
+    setItems((prev) => prev.filter((it: any) => it.restaurantId !== restId));
+    setActionMessage(`Restaurant "${name}" removed`);
+    setTimeout(() => setActionMessage(""), 3000);
   };
 
   // 5. Toggle Dish Popular
-  const handleToggleDishPopular = async (itemId: string, currentVal: boolean) => {
-    try {
-      const res = await fetch(`${API_BASE}/items/${itemId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isPopular: !currentVal }),
-      });
-      if (res.ok) {
-        setActionMessage("Dish popularity updated");
-        loadAllAdminData();
-        setTimeout(() => setActionMessage(""), 3000);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  const handleToggleDishPopular = (itemId: string, currentVal: boolean) => {
+    setItems((prev) =>
+      prev.map((it: any) => (it._id === itemId ? { ...it, isPopular: !currentVal } : it))
+    );
+    setActionMessage("Dish popularity updated");
+    setTimeout(() => setActionMessage(""), 2500);
   };
 
   // 6. Delete Dish
-  const handleDeleteDish = async (itemId: string, name: string) => {
-    if (!window.confirm(`Remove "${name}" from restaurant menu?`)) return;
-    try {
-      const res = await fetch(`${API_BASE}/items/${itemId}`, { method: "DELETE" });
-      if (res.ok) {
-        setActionMessage(`Dish "${name}" removed from database`);
-        loadAllAdminData();
-        setTimeout(() => setActionMessage(""), 3500);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+  const handleDeleteDish = (itemId: string, name: string) => {
+    if (!window.confirm(`Remove "${name}" from menu?`)) return;
+    setItems((prev) => prev.filter((it: any) => it._id !== itemId));
+    setActionMessage(`Dish "${name}" removed`);
+    setTimeout(() => setActionMessage(""), 3000);
   };
 
-  // 7. Create New Dish
-  const handleCreateDish = async (e: React.FormEvent) => {
+  // 7. Create New Dish (demo — adds to local state)
+  const handleCreateDish = (e: React.FormEvent) => {
     e.preventDefault();
     if (!dishRestId || !dishName || !dishPrice) return;
-    try {
-      const res = await fetch(`${API_BASE}/items`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          restaurantId: dishRestId,
-          name: dishName,
-          description: dishDesc || "Chef crafted artisanal delicacy with premium ingredients.",
-          price: Number(dishPrice),
-          category: dishCategory,
-          image: dishImg || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80",
-          isPopular: true,
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setActionMessage(`Dish "${dishName}" created successfully!`);
-        setIsNewDishOpen(false);
-        setDishName("");
-        setDishPrice("");
-        setDishDesc("");
-        setDishImg("");
-        loadAllAdminData();
-        setTimeout(() => setActionMessage(""), 3500);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    const newDish = {
+      _id: `demo_item_${Date.now()}`,
+      restaurantId: dishRestId,
+      name: dishName,
+      description: dishDesc || "Chef crafted artisanal delicacy with premium ingredients.",
+      price: Number(dishPrice),
+      category: dishCategory,
+      image: dishImg || "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80",
+      isPopular: true,
+    };
+    setItems((prev) => [newDish, ...prev]);
+    setActionMessage(`Dish "${dishName}" created (demo)!`);
+    setIsNewDishOpen(false);
+    setDishName(""); setDishPrice(""); setDishDesc(""); setDishImg("");
+    setTimeout(() => setActionMessage(""), 3500);
   };
 
-  // 8. Create Deal
-  const handleCreateDeal = async (e: React.FormEvent) => {
+  // 8. Create Deal (demo — adds to local state)
+  const handleCreateDeal = (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      const res = await fetch(`${API_BASE}/deals`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: dealCode.toUpperCase().trim(),
-          title: dealTitle,
-          discountPercent: Number(dealDiscount),
-          minSpend: Number(dealMinSpend),
-          badgeText: "HOT DEAL",
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setActionMessage(`Voucher ${dealCode} published successfully!`);
-        setIsNewDealOpen(false);
-        setDealCode("");
-        setDealTitle("");
-        loadAllAdminData();
-        setTimeout(() => setActionMessage(""), 3500);
-      }
-    } catch (e) {
-      console.error(e);
-    }
+    const newDeal: Deal = {
+      _id: `demo_deal_${Date.now()}`,
+      code: dealCode.toUpperCase().trim(),
+      title: dealTitle,
+      description: `${dealDiscount}% off on orders above ${dealMinSpend} BDT`,
+      discountPercent: Number(dealDiscount),
+      flatDiscount: 0,
+      maxDiscount: 200,
+      minSpend: Number(dealMinSpend),
+      badgeText: "HOT DEAL",
+      icon: "🔥",
+    };
+    setDeals((prev) => [...prev, newDeal]);
+    setActionMessage(`Voucher ${dealCode} published (demo)!`);
+    setIsNewDealOpen(false);
+    setDealCode(""); setDealTitle("");
+    setTimeout(() => setActionMessage(""), 3500);
   };
 
   // 9. Delete Deal
-  const handleDeleteDeal = async (id: string) => {
+  const handleDeleteDeal = (id: string) => {
     if (!window.confirm("Delete this promotional voucher?")) return;
-    try {
-      await fetch(`${API_BASE}/deals/${id}`, { method: "DELETE" });
-      setActionMessage("Voucher deleted");
-      loadAllAdminData();
-      setTimeout(() => setActionMessage(""), 3000);
-    } catch (e) {
-      console.error(e);
-    }
+    setDeals((prev) => prev.filter((d) => d._id !== id));
+    setActionMessage("Voucher deleted");
+    setTimeout(() => setActionMessage(""), 2500);
   };
 
   // 10. Table Reservation Status & Delete
-  const handleUpdateReservationStatus = async (id: string, status: string) => {
-    try {
-      await fetch(`${API_BASE}/reservations/${id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      setActionMessage("Reservation status updated");
-      loadAllAdminData();
-      setTimeout(() => setActionMessage(""), 3000);
-    } catch (e) {
-      console.error(e);
-    }
+  const handleUpdateReservationStatus = (id: string, status: string) => {
+    setReservations((prev) =>
+      prev.map((r: any) => (r._id === id ? { ...r, status } : r))
+    );
+    setActionMessage("Reservation status updated");
+    setTimeout(() => setActionMessage(""), 2500);
   };
 
-  const handleDeleteReservation = async (id: string) => {
+  const handleDeleteReservation = (id: string) => {
     if (!window.confirm("Cancel and delete this reservation?")) return;
-    try {
-      await fetch(`${API_BASE}/reservations/${id}`, { method: "DELETE" });
-      setActionMessage("Reservation removed");
-      loadAllAdminData();
-      setTimeout(() => setActionMessage(""), 3000);
-    } catch (e) {
-      console.error(e);
-    }
+    setReservations((prev) => prev.filter((r: any) => r._id !== id));
+    setActionMessage("Reservation removed");
+    setTimeout(() => setActionMessage(""), 2500);
   };
 
   // 11. Delete Review
-  const handleDeleteReview = async (id: string) => {
-    if (!window.confirm("Remove this customer review from platform?")) return;
-    try {
-      await fetch(`${API_BASE}/reviews/${id}`, { method: "DELETE" });
-      setActionMessage("Review moderated and removed");
-      loadAllAdminData();
-      setTimeout(() => setActionMessage(""), 3000);
-    } catch (e) {
-      console.error(e);
-    }
+  const handleDeleteReview = (id: string) => {
+    if (!window.confirm("Remove this customer review?")) return;
+    setReviews((prev) => prev.filter((r: any) => r._id !== id));
+    setActionMessage("Review moderated and removed");
+    setTimeout(() => setActionMessage(""), 2500);
   };
 
-  // 12. Re-Seed Clean Demo Data
+  // 12. Re-Seed Demo Data (reload from mockData)
   const handleReSeedDemo = async () => {
-    if (!window.confirm("Re-seed the entire database to the pristine demo dataset (6 restaurants, 24 dishes, deals, sample orders)?")) return;
+    if (!window.confirm("Restore all demo data to its original state?")) return;
     setReSeeding(true);
-    try {
-      const res = await fetch(`${API_BASE}/seed`, { method: "POST" });
-      const data = await res.json();
-      if (data.success) {
-        setActionMessage("Feastora MongoDB database re-seeded and restored to pristine demo state!");
-        await loadAllAdminData();
-        setTimeout(() => setActionMessage(""), 4500);
-      }
-    } catch (e) {
-      console.error("Re-seed error:", e);
-    } finally {
-      setReSeeding(false);
-    }
+    await loadAllAdminData();
+    setActionMessage("Demo data restored to pristine state!");
+    setReSeeding(false);
+    setTimeout(() => setActionMessage(""), 4000);
   };
 
   // Filtered orders
